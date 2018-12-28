@@ -1,23 +1,28 @@
 package de.wolff.paa;
 
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.function.Consumer;
 
 class ModuleRunner {
   
-  private final LinkedList<AnalyserModule> modules = new LinkedList<>();
-  private final LinkedList<AnalyserModule> reverted = new LinkedList<>();
+  private final Deque<AnalyserModule> modules = new LinkedList<>();
 
   ModuleRunner(Iterable<AnalyserModule> modules) {
     modules.forEach(this.modules::addLast);
-    modules.forEach(this.reverted::addFirst);
   }
 
   void jvmStart() {
-    modules.forEach(AnalyserModule::postStartJvm);
+    forEach(modules.iterator(), AnalyserModule::postStartJvm);
   }
 
   void jvmStop() {
-    reverted.forEach(AnalyserModule::preStopJvm);
+    forEach(modules.descendingIterator(), AnalyserModule::preStopJvm);
+  }
+
+  private static void forEach(Iterator<AnalyserModule> modules, Consumer<AnalyserModule> action) {
+    modules.forEachRemaining(action);
   }
 
 }
