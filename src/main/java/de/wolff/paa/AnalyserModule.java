@@ -2,8 +2,8 @@ package de.wolff.paa;
 
 public interface AnalyserModule {
 
-  void postStartJvm();
+  default void postStartJvm() {}
 
-  void preStopJvm();
+  default void preStopJvm() {}
 
 }
