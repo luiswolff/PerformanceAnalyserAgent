@@ -5,8 +5,10 @@ import java.util.ServiceLoader;
 
 public class PerformanceAnalyserAgent {
 
+  public static ModuleRunner moduleRunner;
+
   public static void premain(String args, Instrumentation instrumentation) {
-    ModuleRunner moduleRunner = createModuleRunner();
+    moduleRunner = createModuleRunner();
     moduleRunner.jvmStart();
     addShutdownHook(moduleRunner::jvmStop);
   }
