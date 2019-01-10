@@ -14,17 +14,27 @@ class PerformanceAnalyserClassFileTransformer implements ClassFileTransformer {
     return classfileBuffer;
   }
 
-  public void setTargetClass(Class<?> targetClass) {
+  public void setInvocationClass(Class<?> targetClass) {
     // TODO Auto-generated method stub
 
   }
 
-  public void setTargetField(String targetField) {
+  public void setInvocationField(String targetField) {
     // TODO Auto-generated method stub
 
   }
 
-  public void setTargetMethod(String targetMethod) {
+  public void setInvocationMethod(String targetMethod) {
+    // TODO Auto-generated method stub
+
+  }
+
+  public void setRedefineMethodName(String redefineMethodName) {
+    // TODO Auto-generated method stub
+
+  }
+
+  public void setRedefineMathodParameterTypes(Class<?>[] redefineMethodParameterTypes) {
     // TODO Auto-generated method stub
 
   }
