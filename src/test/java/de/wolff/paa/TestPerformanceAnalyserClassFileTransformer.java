@@ -22,7 +22,7 @@ import org.junit.Test;
 
 public class TestPerformanceAnalyserClassFileTransformer {
 
-  public static ModuleRunner moduleRunner;
+  private static ModuleRunner moduleRunner;
 
   private List<Path> compiledClassFiles = new LinkedList<Path>();
 
@@ -59,8 +59,8 @@ public class TestPerformanceAnalyserClassFileTransformer {
     compileClasses();
     fillClassLoaders();
 
-    invokeStaticRedefined(classNames.get(0), redefineMethodName,
-        redefineMethodParameterTypes, new Object[] {new String[0]});
+    invokeStaticRedefined(classNames.get(0), redefineMethodName, redefineMethodParameterTypes,
+        new Object[] {new String[0]});
 
     verify(moduleRunner).jvmStart();
   }
@@ -73,7 +73,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
   private Path toJavaFile(String javaFileName) {
     try {
-      URI javaFileUri = getClass().getResource(javaFileName +".java").toURI();
+      URI javaFileUri = getClass().getResource(javaFileName + ".java").toURI();
       return Paths.get(javaFileUri);
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
@@ -125,7 +125,14 @@ public class TestPerformanceAnalyserClassFileTransformer {
       throw new RuntimeException(e);
     }
   }
+
+  public static void invokationTargetByTransformation() {
+    // execute method on static field, so the JUnit test instance can verify whether the redefined
+    // class has executed this method
+    moduleRunner.jvmStart();
+  }
 }
+
 
 class CommandLineJavaCompiler {
 
@@ -133,8 +140,8 @@ class CommandLineJavaCompiler {
   private final int commandLength;
 
   CommandLineJavaCompiler(String encoding, String javaVersion) {
-    javac = new String[]
-    {"javac", "-encoding", encoding, "-source", javaVersion, "-target", javaVersion};
+    javac = new String[] {"javac", "-encoding", encoding, "-source", javaVersion, "-target",
+        javaVersion};
     commandLength = javac.length;
   }
 
@@ -176,6 +183,7 @@ class CommandLineJavaCompiler {
   }
 
 }
+
 
 class TemporaryClassLoader extends ClassLoader {
 
