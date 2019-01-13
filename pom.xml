@@ -37,7 +37,7 @@
 						<manifestEntries>
 							<Premain-Class>de.wolff.paa.PerformanceAnalyserAgent</Premain-Class>
 							<Can-Redefine-Classes>false</Can-Redefine-Classes>
-							<Can-Retransform-Classes>false</Can-Retransform-Classes>
+							<Can-Retransform-Classes>true</Can-Retransform-Classes>
 							<Can-Set-Native-Method-Prefix>false</Can-Set-Native-Method-Prefix>
 							<Implementation-Title>${project.name}</Implementation-Title>
 							<Implementation-Version>${project.version}</Implementation-Version>

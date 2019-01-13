@@ -1,5 +1,6 @@
 package de.wolff.paa;
 
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.lang.instrument.IllegalClassFormatException;
@@ -59,10 +60,55 @@ public class TestPerformanceAnalyserClassFileTransformer {
     compileClasses();
     fillClassLoaders();
 
+    checkByteCodeEqualsExpect("WithMain");
+
     invokeStaticRedefined(classNames.get(0), redefineMethodName, redefineMethodParameterTypes,
         new Object[] {new String[0]});
 
     verify(moduleRunner).jvmStart();
+  }
+
+  @Test
+  public void testNoTransformWithMain() {
+    classNames = Arrays.asList("WithMain");
+    classesForRedefine = Collections.singletonList(classNames.get(0));
+    redefineMethodName = "apply";
+    redefineMethodParameterTypes = new Class<?>[] {};
+
+    compileClasses();
+    fillClassLoaders();
+
+    checkByteCodeEqualsExpect();
+  }
+
+  @Test
+  public void testTransformNoMain() {
+    classNames = Arrays.asList("NoMain");
+    classesForRedefine = Collections.singletonList(classNames.get(0));
+    redefineMethodName = "apply";
+    redefineMethodParameterTypes = new Class<?>[] {};
+
+    compileClasses();
+    fillClassLoaders();
+
+    checkByteCodeEqualsExpect("NoMain");
+
+    invokeStaticRedefined(classNames.get(0), "apply", new Class<?>[] {});
+
+    verify(moduleRunner).jvmStart();
+  }
+
+  @Test
+  public void testNoTransformNoMain() {
+    classNames = Arrays.asList("NoMain");
+    classesForRedefine = Collections.singletonList(classNames.get(0));
+    redefineMethodName = "main";
+    redefineMethodParameterTypes = new Class<?>[] {String[].class};
+
+    compileClasses();
+    fillClassLoaders();
+
+    checkByteCodeEqualsExpect();
   }
 
   private void compileClasses() {
@@ -108,7 +154,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
       classData = classFileTransformer.transform(classLoaderOriginal, className, clazz,
           clazz.getProtectionDomain(), classData);
-      classLoaderRedefined.addClass("WithMain", classData);
+      classLoaderRedefined.addClass(className, classData);
     } catch (ClassNotFoundException | IllegalClassFormatException e) {
       throw new RuntimeException(e);
     }
@@ -123,6 +169,23 @@ public class TestPerformanceAnalyserClassFileTransformer {
       method.invoke(null, args);
     } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private void checkByteCodeEqualsExpect(String... redefined) {
+    List<String> redefinedList = Arrays.asList(redefined);
+
+    for (String className : classNames) {
+      byte[] originalClass = classLoaderOriginal.classData(className);
+      byte[] redefinedClass = classLoaderRedefined.classData(className);
+
+      boolean classesEquals = Arrays.equals(originalClass, redefinedClass);
+      if (redefinedList.contains(className)) {
+        assertFalse("Class " + className + " is expected to be redefined but wasn't",
+            classesEquals);
+      } else {
+        assertTrue("Class " + className + " is expeced to be unmodified but was", classesEquals);
+      }
     }
   }
 
