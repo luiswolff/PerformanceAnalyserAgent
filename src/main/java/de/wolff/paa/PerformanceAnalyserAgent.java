@@ -9,8 +9,12 @@ public class PerformanceAnalyserAgent {
 
   public static void premain(String args, Instrumentation instrumentation) {
     moduleRunner = createModuleRunner();
-    moduleRunner.jvmStart();
+    instrumentation.addTransformer(new PerformanceAnalyserClassFileTransformer(), true);
     addShutdownHook(moduleRunner::jvmStop);
+  }
+
+  public static void mainInvoked() {
+    moduleRunner.jvmStart();
   }
 
   private static ModuleRunner createModuleRunner() {

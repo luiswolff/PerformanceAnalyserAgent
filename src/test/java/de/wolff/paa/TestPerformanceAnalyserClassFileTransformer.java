@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -17,13 +18,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestPerformanceAnalyserClassFileTransformer {
 
-  private static ModuleRunner moduleRunner;
+  private static Consumer<?> moduleRunner;
 
   private List<Path> compiledClassFiles = new LinkedList<Path>();
 
@@ -39,7 +41,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
   @Before
   public void setUp() throws Exception {
-    moduleRunner = mock(ModuleRunner.class);
+    moduleRunner = mock(Consumer.class);
   }
 
   @After
@@ -65,7 +67,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
     invokeStaticRedefined(classNames.get(0), redefineMethodName, redefineMethodParameterTypes,
         new Object[] {new String[0]});
 
-    verify(moduleRunner).jvmStart();
+    verify(moduleRunner).accept(null);
   }
 
   @Test
@@ -95,7 +97,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
     invokeStaticRedefined(classNames.get(0), "apply", new Class<?>[] {});
 
-    verify(moduleRunner).jvmStart();
+    verify(moduleRunner).accept(null);
   }
 
   @Test
@@ -137,8 +139,8 @@ public class TestPerformanceAnalyserClassFileTransformer {
   private void createClassFileTransformer() {
     classFileTransformer = new PerformanceAnalyserClassFileTransformer();
     classFileTransformer.setInvocationClass(getClass());
-    classFileTransformer.setInvocationField("moduleRunner");
-    classFileTransformer.setInvocationMethod("jvmStart");
+    classFileTransformer.setInvocationMethod("invokationTargetByTransformation");
+    classFileTransformer.setRedefineMethodModifiers(Modifier.PUBLIC + Modifier.STATIC);
     classFileTransformer.setRedefineMethodName(redefineMethodName);
     classFileTransformer.setRedefineMathodParameterTypes(redefineMethodParameterTypes);
   }
@@ -192,7 +194,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
   public static void invokationTargetByTransformation() {
     // execute method on static field, so the JUnit test instance can verify whether the redefined
     // class has executed this method
-    moduleRunner.jvmStart();
+    moduleRunner.accept(null);
   }
 }
 
