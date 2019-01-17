@@ -1,15 +1,17 @@
-package de.wolff.paa;
+package de.wolff.paa.transform;
+
+import java.io.IOException;
 
 class ClassModifier {
 
   private final byte[] originalClassfileBuffer;
 
-  ClassModifier(byte[] originalClassfileBuffer) {
+  ClassModifier(byte[] originalClassfileBuffer) throws IOException {
     this.originalClassfileBuffer = originalClassfileBuffer;
     // TODO current class file definition
   }
 
-  short addMethodReference(String name, String invocationMethod) {
+  int addMethodReference(String name, String invocationMethod) {
     // TODO Auto-generated method stub
     return 0;
   }

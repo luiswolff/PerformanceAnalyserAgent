@@ -1,4 +1,4 @@
-package de.wolff.paa;
+package de.wolff.paa.transform;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -24,8 +24,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
+import de.wolff.paa.transform.MethodInvokedCallbackTransformer;
 
-public class TestPerformanceAnalyserClassFileTransformer {
+public class TestMethodInvokedCallbackTransformer {
 
   private static Runnable moduleRunner;
 
@@ -36,7 +37,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
   private final List<Runnable> afterInvocation = new LinkedList<Runnable>();
 
-  private PerformanceAnalyserClassFileTransformer classFileTransformer;
+  private MethodInvokedCallbackTransformer classFileTransformer;
 
   private List<String> classNames;
   private List<String> classesForRedefine;
@@ -143,7 +144,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
   }
 
   private void createClassFileTransformer() {
-    classFileTransformer = new PerformanceAnalyserClassFileTransformer();
+    classFileTransformer = new MethodInvokedCallbackTransformer();
     classFileTransformer.setInvocationClass(getClass());
     classFileTransformer.setInvocationMethod("invokationTargetByTransformation");
     classFileTransformer.setRedefineMethodModifiers(Modifier.PUBLIC + Modifier.STATIC);

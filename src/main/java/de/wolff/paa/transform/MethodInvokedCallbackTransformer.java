@@ -1,5 +1,6 @@
-package de.wolff.paa;
+package de.wolff.paa.transform;
 
+import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.reflect.Method;
@@ -7,12 +8,13 @@ import java.security.ProtectionDomain;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class PerformanceAnalyserClassFileTransformer implements ClassFileTransformer {
+public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
 
   private static final Logger LOGGER =
-      Logger.getLogger(PerformanceAnalyserClassFileTransformer.class.getName());
+      Logger.getLogger(MethodInvokedCallbackTransformer.class.getName());
 
   private Class<?> invocationClass;
   private String invocationMethod;
@@ -31,12 +33,16 @@ class PerformanceAnalyserClassFileTransformer implements ClassFileTransformer {
 
       LOGGER.fine("Redefine class definition of " + className);
 
-      ClassModifier classModifier = new ClassModifier(classfileBuffer);
-      short constantPoolIndex =
-          classModifier.addMethodReference(invocationClass.getName(), this.invocationMethod);
-      classModifier.addInvokeStaticToBegin(constantPoolIndex, redefineMethodName,
-          redefineMethodParameterTypes, redefineMethodSignature);
-      return classModifier.toByteCode();
+      try {
+        ClassModifier classModifier = new ClassModifier(classfileBuffer);
+        int constantPoolIndex =
+            classModifier.addMethodReference(invocationClass.getName(), this.invocationMethod);
+        classModifier.addInvokeStaticToBegin(constantPoolIndex, redefineMethodName,
+            redefineMethodParameterTypes, redefineMethodSignature);
+        return classModifier.toByteCode();
+      } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "error transforming class " + className, e);
+      }
     }
     return classfileBuffer;
   }

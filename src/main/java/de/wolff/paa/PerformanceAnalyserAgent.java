@@ -2,6 +2,7 @@ package de.wolff.paa;
 
 import java.lang.instrument.Instrumentation;
 import java.util.ServiceLoader;
+import de.wolff.paa.transform.MethodInvokedCallbackTransformer;
 
 public class PerformanceAnalyserAgent {
 
@@ -9,7 +10,7 @@ public class PerformanceAnalyserAgent {
 
   public static void premain(String args, Instrumentation instrumentation) {
     moduleRunner = createModuleRunner();
-    instrumentation.addTransformer(new PerformanceAnalyserClassFileTransformer(), true);
+    instrumentation.addTransformer(new MethodInvokedCallbackTransformer(), true);
     addShutdownHook(moduleRunner::jvmStop);
   }
 
