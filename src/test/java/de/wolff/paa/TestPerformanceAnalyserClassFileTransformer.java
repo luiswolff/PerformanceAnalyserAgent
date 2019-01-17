@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import java.io.IOException;
 import java.lang.instrument.IllegalClassFormatException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
@@ -11,6 +12,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,19 +20,21 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TestPerformanceAnalyserClassFileTransformer {
 
-  private static Consumer<?> moduleRunner;
+  private static Runnable moduleRunner;
 
   private List<Path> compiledClassFiles = new LinkedList<Path>();
 
   private final TemporaryClassLoader classLoaderOriginal = new TemporaryClassLoader();
   private final TemporaryClassLoader classLoaderRedefined = new TemporaryClassLoader();
+
+  private final List<Runnable> afterInvocation = new LinkedList<Runnable>();
 
   private PerformanceAnalyserClassFileTransformer classFileTransformer;
 
@@ -41,7 +45,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
   @Before
   public void setUp() throws Exception {
-    moduleRunner = mock(Consumer.class);
+    moduleRunner = mock(Runnable.class);
   }
 
   @After
@@ -55,7 +59,7 @@ public class TestPerformanceAnalyserClassFileTransformer {
   @Test
   public void testTransformWithMain() {
     classNames = Arrays.asList("WithMain");
-    classesForRedefine = Collections.singletonList(classNames.get(0));
+    classesForRedefine = Arrays.asList("WithMain");
     redefineMethodName = "main";
     redefineMethodParameterTypes = new Class<?>[] {String[].class};
 
@@ -64,48 +68,50 @@ public class TestPerformanceAnalyserClassFileTransformer {
 
     checkByteCodeEqualsExpect("WithMain");
 
-    invokeStaticRedefined(classNames.get(0), redefineMethodName, redefineMethodParameterTypes,
+    setStaticRedefined("WithMain", "callback");
+    invokeStaticRedefined("WithMain", redefineMethodName, redefineMethodParameterTypes,
         new Object[] {new String[0]});
 
-    verify(moduleRunner).accept(null);
+    verifyInvocations();
   }
 
   @Test
-  public void testNoTransformWithMain() {
-    classNames = Arrays.asList("WithMain");
-    classesForRedefine = Collections.singletonList(classNames.get(0));
+  public void testTransformNoArgs() {
+    classNames = Arrays.asList("NoMain");
+    classesForRedefine = Arrays.asList("NoMain");
     redefineMethodName = "apply";
     redefineMethodParameterTypes = new Class<?>[] {};
 
     compileClasses();
     fillClassLoaders();
 
+    setStaticRedefined("NoMain", "callback");
+    checkByteCodeEqualsExpect("NoMain");
+
+    invokeStaticRedefined("NoMain", "apply", new Class<?>[] {});
+
+    verifyInvocations();;
+  }
+
+  @Test
+  public void testNoTransformBecauseWrongMethodName() {
+    classNames = Arrays.asList("WithMain");
+    classesForRedefine = Collections.singletonList(classNames.get(0));
+    redefineMethodName = "apply";
+    redefineMethodParameterTypes = new Class<?>[] {String[].class};
+  
+    compileClasses();
+    fillClassLoaders();
+  
     checkByteCodeEqualsExpect();
   }
 
   @Test
-  public void testTransformNoMain() {
-    classNames = Arrays.asList("NoMain");
-    classesForRedefine = Collections.singletonList(classNames.get(0));
-    redefineMethodName = "apply";
-    redefineMethodParameterTypes = new Class<?>[] {};
-
-    compileClasses();
-    fillClassLoaders();
-
-    checkByteCodeEqualsExpect("NoMain");
-
-    invokeStaticRedefined(classNames.get(0), "apply", new Class<?>[] {});
-
-    verify(moduleRunner).accept(null);
-  }
-
-  @Test
-  public void testNoTransformNoMain() {
-    classNames = Arrays.asList("NoMain");
-    classesForRedefine = Collections.singletonList(classNames.get(0));
+  public void testNoTransformBecauseNoArgsExpected() {
+    classNames = Arrays.asList("WithMain");
+    classesForRedefine = Arrays.asList("WithMain");
     redefineMethodName = "main";
-    redefineMethodParameterTypes = new Class<?>[] {String[].class};
+    redefineMethodParameterTypes = new Class<?>[0];
 
     compileClasses();
     fillClassLoaders();
@@ -162,6 +168,20 @@ public class TestPerformanceAnalyserClassFileTransformer {
     }
   }
 
+  private void setStaticRedefined(String className, String fieldName) {
+    
+    Runnable mockInvokation = mock(Runnable.class);
+    try {
+      Class<?> clazz = classLoaderRedefined.loadClass(className);
+      Field field = clazz.getField(fieldName);
+      field.set(null, mockInvokation);
+      afterInvocation.add(mockInvokation);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+  }
+
   private void invokeStaticRedefined(String className, String methodName, Class<?>[] parameterTypes,
       Object... args) {
 
@@ -191,10 +211,26 @@ public class TestPerformanceAnalyserClassFileTransformer {
     }
   }
 
+  private void verifyInvocations() {
+
+    InOrder inOrder = inOrder(allMocks());
+
+    inOrder.verify(moduleRunner).run();
+    afterInvocation.forEach(r -> inOrder.verify(r).run());
+    inOrder.verifyNoMoreInteractions();
+  }
+
+  private Object[] allMocks() {
+    List<Runnable> allMocks = new ArrayList<Runnable>(afterInvocation.size() + 1);
+    allMocks.addAll(afterInvocation);
+    allMocks.add(moduleRunner);
+    return allMocks.toArray();
+  }
+
   public static void invokationTargetByTransformation() {
     // execute method on static field, so the JUnit test instance can verify whether the redefined
     // class has executed this method
-    moduleRunner.accept(null);
+    moduleRunner.run();
   }
 }
 

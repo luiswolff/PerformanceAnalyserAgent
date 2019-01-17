@@ -2,8 +2,11 @@ package de.wolff.paa;
 
 class ClassModifier {
 
-  ClassModifier(byte[] classfileBuffer) {
-    // TODO Auto-generated constructor stub
+  private final byte[] originalClassfileBuffer;
+
+  ClassModifier(byte[] originalClassfileBuffer) {
+    this.originalClassfileBuffer = originalClassfileBuffer;
+    // TODO current class file definition
   }
 
   short addMethodReference(String name, String invocationMethod) {
@@ -18,8 +21,8 @@ class ClassModifier {
   }
 
   byte[] toByteCode() {
-    // TODO Auto-generated method stub
-    return null;
+    // TODO read generated class file definition
+    return originalClassfileBuffer;
   }
 
 }
