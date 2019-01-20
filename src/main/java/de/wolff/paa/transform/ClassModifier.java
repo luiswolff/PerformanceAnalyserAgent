@@ -20,12 +20,12 @@ class ClassModifier {
 
     // @formatter:off
     classParts = Arrays.asList( 
-        new ClassStartPart(source), 
+        new ClassStartPart(source),
         new ClassConstantsPoolPart(source),
         new ClassDescriptionPart(source),
         new ClassFieldsPart(source),
         new ClassMethodsPart(source),
-        new ClassAttributesPart(source)
+        new AttributesPart(source)
     );
     // @formatter:on
   }

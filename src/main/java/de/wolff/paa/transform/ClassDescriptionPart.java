@@ -6,14 +6,28 @@ import java.io.IOException;
 
 class ClassDescriptionPart implements ClassPart {
 
+  private final byte accessFlags;
+  private final byte thisClassNameRef;
+  private final byte superClassNameRef;
+  private final byte[] interfaceClassNameRefs;
+
   public ClassDescriptionPart(DataInput source) throws IOException {
-    // TODO Auto-generated constructor stub
+    accessFlags = source.readByte();
+    thisClassNameRef = source.readByte();
+    superClassNameRef = source.readByte();
+
+    int interfaceCount = source.readUnsignedByte();
+    interfaceClassNameRefs = new byte[interfaceCount];
+    source.readFully(interfaceClassNameRefs);
   }
 
   @Override
   public void writeTo(DataOutput sink) throws IOException {
-    // TODO Auto-generated method stub
-
+    sink.writeByte(accessFlags);
+    sink.writeByte(thisClassNameRef);
+    sink.writeByte(superClassNameRef);
+    sink.writeByte(interfaceClassNameRefs.length);
+    sink.write(interfaceClassNameRefs);
   }
 
 }
