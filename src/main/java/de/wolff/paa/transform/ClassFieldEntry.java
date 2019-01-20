@@ -4,9 +4,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-class FieldDescription implements ClassPart {
+class ClassFieldEntry implements ClassPart {
 
-  public FieldDescription(DataInput source) throws IOException {
+  public ClassFieldEntry(DataInput source) throws IOException {
     // TODO Auto-generated constructor stub
   }
 

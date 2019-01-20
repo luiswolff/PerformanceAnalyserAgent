@@ -5,7 +5,7 @@ import java.io.IOException;
 
 abstract class AttributeEntryReader {
 
-  abstract AttributeEntry read(DataInput source) throws IOException;
+  abstract ClassAttributeEntry read(DataInput source) throws IOException;
 
   static AttributeEntryReader getInstance(byte tag) {
     // TODO implement

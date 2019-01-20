@@ -5,7 +5,7 @@ import java.io.IOException;
 
 abstract class ClasspoolEntryReader {
 
-  abstract ClasspoolEntry read(DataInput source) throws IOException;
+  abstract ClassConstantPoolEntry read(DataInput source) throws IOException;
 
   static ClasspoolEntryReader getInstance(byte tag) {
     // TODO implement

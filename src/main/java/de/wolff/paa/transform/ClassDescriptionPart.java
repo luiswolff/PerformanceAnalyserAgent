@@ -4,9 +4,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-class MethodDescription implements ClassPart {
+class ClassDescriptionPart implements ClassPart {
 
-  public MethodDescription(DataInput source) throws IOException {
+  public ClassDescriptionPart(DataInput source) throws IOException {
     // TODO Auto-generated constructor stub
   }
 
