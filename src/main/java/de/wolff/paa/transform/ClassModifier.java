@@ -8,26 +8,27 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
 class ClassModifier {
 
-  private final List<ClassPart> classParts;
+  private final ClassStartPart classStart;
+  private final ClassConstantsPoolPart classConstantsPool;
+  private final ClassDescriptionPart classDescription;
+  private final ClassFieldsPart classFields;
+  private final ClassMethodsPart classMethods;
+  private final AttributesPart classAttributs;
 
   ClassModifier(byte[] originalClassfileBuffer) throws IOException {
     ByteArrayInputStream bais = new ByteArrayInputStream(originalClassfileBuffer);
     DataInput source = new DataInputStream(bais);
 
-    // @formatter:off
-    classParts = Arrays.asList( 
-        new ClassStartPart(source),
-        new ClassConstantsPoolPart(source),
-        new ClassDescriptionPart(source),
-        new ClassFieldsPart(source),
-        new ClassMethodsPart(source),
-        new AttributesPart(source)
-    );
-    // @formatter:on
+    classStart = new ClassStartPart(source);
+    classConstantsPool = new ClassConstantsPoolPart(source);
+    classDescription = new ClassDescriptionPart(source);
+    classFields = new ClassFieldsPart(source);
+    classMethods = new ClassMethodsPart(source);
+    classAttributs = new AttributesPart(source);
+
   }
 
   int addMethodReference(String name, String invocationMethod) {
@@ -43,13 +44,29 @@ class ClassModifier {
 
   byte[] toByteCode() throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    writePartsTo(baos);
+    return baos.toByteArray();
+  }
+
+  private void writePartsTo(ByteArrayOutputStream baos) throws IOException {
     DataOutput sink = new DataOutputStream(baos);
 
-    for (ClassPart part : classParts) {
+    for (ClassPart part : allParts()) {
       part.writeTo(sink);
     }
+  }
 
-    return baos.toByteArray();
+  private Iterable<ClassPart> allParts() {
+    // @formatter:off
+    return Arrays.asList( 
+        classStart,
+        classConstantsPool,
+        classDescription,
+        classFields,
+        classMethods,
+        classAttributs
+    );
+    // @formatter:on
   }
 
 }
