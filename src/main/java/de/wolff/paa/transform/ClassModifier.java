@@ -32,14 +32,25 @@ class ClassModifier {
   }
 
   int addMethodReference(String name, String invocationMethod) {
-    // TODO Auto-generated method stub
-    return 0;
+
+    name = toByteCodeClassName(name);
+    // @formatter:off
+    return classConstantsPool.newMethodRef()
+        .classRef(name)
+        // At the moment we only support parameter less, static and void methods
+        .nameAndType(invocationMethod, "()V")
+        .addToPool();
+    // @formatter:on
+  }
+
+  private String toByteCodeClassName(String name) {
+    return "L" + name.replace('.', '/');
   }
 
   void addInvokeStaticToBegin(int constantPoolIndex, String redefineMethodName,
       Class<?>[] redefineMethodParameterTypes, Integer redefineMethodSignature) {
     // TODO Auto-generated method stub
-
+    System.out.println("Invoke method from constant pool " + constantPoolIndex);
   }
 
   byte[] toByteCode() throws IOException {

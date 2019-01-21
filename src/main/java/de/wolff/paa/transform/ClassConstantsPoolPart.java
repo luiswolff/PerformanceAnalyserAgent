@@ -4,6 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collection;
 
 class ClassConstantsPoolPart
     extends AbstractClassListPart<ClassConstantsPoolPart.Entry> {
@@ -75,6 +77,50 @@ class ClassConstantsPoolPart
     }
   }
 
+  MethodRefBuilder newMethodRef() {
+    return new MethodRefBuilder();
+  }
+
+  class MethodRefBuilder {
+
+    private MemberRefEntry methodRef;
+    private StringRefEntry classRef;
+    private NameAndTypeRefEntry nameAndType;
+
+    MethodRefBuilder classRef(String className) {
+      classRef = new StringRefEntry(CONSTANT_CLASS);
+      classRef.utf8Value = new Utf8Entry(className);
+      return this;
+    }
+
+    MethodRefBuilder nameAndType(String name, String type) {
+      nameAndType = new NameAndTypeRefEntry();
+      nameAndType.name = new Utf8Entry(name);
+      nameAndType.type = new Utf8Entry(type);
+      return this;
+    }
+
+    int addToPool() {
+      createMethodRef();
+      addNewEntries();
+
+      return partEntries.indexOf(methodRef);
+    }
+
+    private void createMethodRef() {
+      methodRef = new MemberRefEntry(CONSTANT_METHOD_REF);
+      methodRef.member = classRef;
+      methodRef.nameAndType = nameAndType;
+    }
+
+    private void addNewEntries() {
+      Collection<Entry> newEntries = Arrays.asList(methodRef, classRef, classRef.utf8Value,
+          nameAndType, nameAndType.name, nameAndType.type);
+      partEntries.addAll(newEntries);
+    }
+
+  }
+
   abstract class Entry implements ClassPart {
 
     int getIndex() {
@@ -95,7 +141,11 @@ class ClassConstantsPoolPart
     private final int ref;
     private Utf8Entry utf8Value;
 
-    private StringRefEntry(byte tag, int ref) throws IOException {
+    StringRefEntry(byte tag) {
+      this(tag, -1);
+    }
+
+    private StringRefEntry(byte tag, int ref) {
       this.tag = tag;
       this.ref = ref;
     }
@@ -121,7 +171,11 @@ class ClassConstantsPoolPart
     private StringRefEntry member;
     private NameAndTypeRefEntry nameAndType;
 
-    public MemberRefEntry(byte tag, int memberRef, int nameAndTypeRef) {
+    private MemberRefEntry(byte tag) {
+      this(tag, -1, -1);
+    }
+
+    private MemberRefEntry(byte tag, int memberRef, int nameAndTypeRef) {
       super();
       this.tag = tag;
       this.memberRef = memberRef;
@@ -149,6 +203,10 @@ class ClassConstantsPoolPart
     private final int typeRef;
     private Utf8Entry name;
     private Utf8Entry type;
+
+    private NameAndTypeRefEntry() {
+      this(-1, -1);
+    }
 
     private NameAndTypeRefEntry(int nameRef, int typeRef) {
       super();
@@ -218,6 +276,10 @@ class ClassConstantsPoolPart
 
     private Utf8Entry(byte[] content) {
       this.content = new String(content, StandardCharsets.UTF_8);
+    }
+
+    private Utf8Entry(String content) {
+      this.content = content;
     }
 
     @Override
