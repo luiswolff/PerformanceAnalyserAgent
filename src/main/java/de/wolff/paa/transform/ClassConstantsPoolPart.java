@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 class ClassConstantsPoolPart
-    extends AbstractClassListPart<ClassConstantPoolEntry> {
+    extends AbstractClassListPart<ClassConstantsPoolPart.Entry> {
 
   private static final byte CONSTANT_UTF8 = 1;
   private static final byte CONSTANT_INTEGER = 3;
@@ -27,10 +27,16 @@ class ClassConstantsPoolPart
 
   ClassConstantsPoolPart(DataInput source) throws IOException {
     super(source);
+    // @formatter:off
+    partEntries.stream()
+        .filter(RefEntry.class::isInstance)
+        .map(RefEntry.class::cast)
+        .forEach(RefEntry::loadReferences);
+    // @formatter:on
   }
 
   @Override
-  protected ClassConstantPoolEntry readPartEntry(DataInput source) throws IOException {
+  protected Entry readPartEntry(DataInput source) throws IOException {
     if (partEntries.size() == 0) {
       return new EmptyEntry();
     }
@@ -38,15 +44,14 @@ class ClassConstantsPoolPart
     return toClassConstantPoolEntry(tag, source);
   }
 
-  private ClassConstantPoolEntry toClassConstantPoolEntry(byte tag, DataInput source)
+  private Entry toClassConstantPoolEntry(byte tag, DataInput source)
       throws IOException {
     switch (tag) {
       case CONSTANT_UTF8:
         int length = source.readUnsignedShort();
         byte[] rawContent = new byte[length];
         source.readFully(rawContent);
-        String content = new String(rawContent, StandardCharsets.UTF_8);
-        return new Utf8Entry(content);
+        return new Utf8Entry(rawContent);
       case CONSTANT_INTEGER:
       case CONSTANT_FLOAT:
         return new NumberEntry(tag, source.readInt());
@@ -60,18 +65,35 @@ class ClassConstantsPoolPart
       case CONSTANT_FIELD_REF:
       case CONSTANT_METHOD_REF:
       case CONSTANT_INTERFACE_REF:
-      case CONSTANT_NAME_AND_TYPE:
-      case CONSTANT_INVOKE_DYNAMIC:
         return new MemberRefEntry(tag, source.readUnsignedShort(), source.readUnsignedShort());
+      case CONSTANT_INVOKE_DYNAMIC:
+        return new InvokeDynamicEntry(source.readUnsignedShort(), source.readUnsignedShort());
+      case CONSTANT_NAME_AND_TYPE:
+        return new NameAndTypeRefEntry(source.readUnsignedShort(), source.readUnsignedShort());
       default:
         throw new IOException("Unknown constant pool tag " + tag);
     }
   }
 
-  private class StringRefEntry implements ClassConstantPoolEntry {
+  abstract class Entry implements ClassPart {
+
+    int getIndex() {
+      return partEntries.indexOf(this);
+    }
+
+  }
+
+  private abstract class RefEntry extends Entry {
+
+    abstract void loadReferences();
+
+  }
+
+  class StringRefEntry extends RefEntry {
 
     private final byte tag;
     private final int ref;
+    private Utf8Entry utf8Value;
 
     private StringRefEntry(byte tag, int ref) throws IOException {
       this.tag = tag;
@@ -81,34 +103,75 @@ class ClassConstantsPoolPart
     @Override
     public void writeTo(DataOutput sink) throws IOException {
       sink.writeByte(tag);
-      sink.writeShort(ref);
+      sink.writeShort(utf8Value.getIndex());
+    }
+
+    @Override
+    void loadReferences() {
+      utf8Value = getEntryWithIndex(ref, Utf8Entry.class);
     }
 
   }
 
-  private class MemberRefEntry implements ClassConstantPoolEntry {
+  class MemberRefEntry extends RefEntry {
 
     private final byte tag;
-    private final int classRef;
+    private final int memberRef;
     private final int nameAndTypeRef;
+    private StringRefEntry member;
+    private NameAndTypeRefEntry nameAndType;
 
-    public MemberRefEntry(byte tag, int classRef, int nameAndTypeRef) {
+    public MemberRefEntry(byte tag, int memberRef, int nameAndTypeRef) {
       super();
       this.tag = tag;
-      this.classRef = classRef;
+      this.memberRef = memberRef;
       this.nameAndTypeRef = nameAndTypeRef;
     }
 
     @Override
     public void writeTo(DataOutput sink) throws IOException {
       sink.writeByte(tag);
-      sink.writeShort(classRef);
-      sink.writeShort(nameAndTypeRef);
+      sink.writeShort(member.getIndex());
+      sink.writeShort(nameAndType.getIndex());
+    }
+
+    @Override
+    void loadReferences() {
+      member = getEntryWithIndex(memberRef, StringRefEntry.class);
+      nameAndType = getEntryWithIndex(nameAndTypeRef, NameAndTypeRefEntry.class);
     }
 
   }
 
-  private class NumberEntry implements ClassConstantPoolEntry {
+  class NameAndTypeRefEntry extends RefEntry {
+
+    private final int nameRef;
+    private final int typeRef;
+    private Utf8Entry name;
+    private Utf8Entry type;
+
+    private NameAndTypeRefEntry(int nameRef, int typeRef) {
+      super();
+      this.nameRef = nameRef;
+      this.typeRef = typeRef;
+    }
+
+    @Override
+    public void writeTo(DataOutput sink) throws IOException {
+      sink.writeByte(CONSTANT_NAME_AND_TYPE);
+      sink.writeShort(name.getIndex());
+      sink.writeShort(type.getIndex());
+    }
+
+    @Override
+    void loadReferences() {
+      name = getEntryWithIndex(nameRef, Utf8Entry.class);
+      type = getEntryWithIndex(typeRef, Utf8Entry.class);
+    }
+
+  }
+
+  class NumberEntry extends Entry {
 
     private final byte tag;
     private final int bytes;
@@ -127,7 +190,7 @@ class ClassConstantsPoolPart
 
   }
 
-  private class HighNumberEntry implements ClassConstantPoolEntry {
+  class HighNumberEntry extends Entry {
 
     private final byte tag;
     private final int highBytes;
@@ -149,12 +212,12 @@ class ClassConstantsPoolPart
 
   }
 
-  private class Utf8Entry implements ClassConstantPoolEntry {
+  class Utf8Entry extends Entry {
 
     private final String content;
 
-    private Utf8Entry(String content) {
-      this.content = content;
+    private Utf8Entry(byte[] content) {
+      this.content = new String(content, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -167,13 +230,46 @@ class ClassConstantsPoolPart
 
   }
 
-  private class EmptyEntry implements ClassConstantPoolEntry {
+  class InvokeDynamicEntry extends RefEntry {
+
+    private final int bootstrapMethodAttrIndex;
+    private final int nameAndTypeRef;
+    private NameAndTypeRefEntry nameAndType;
+
+    InvokeDynamicEntry(int bootstrapMethodAttrIndex, int nameAndTypeRef) {
+      this.bootstrapMethodAttrIndex = bootstrapMethodAttrIndex;
+      this.nameAndTypeRef = nameAndTypeRef;
+    }
+
+    @Override
+    public void writeTo(DataOutput sink) throws IOException {
+      sink.writeByte(CONSTANT_INVOKE_DYNAMIC);
+      sink.writeByte(bootstrapMethodAttrIndex);
+      sink.writeByte(nameAndType.getIndex());
+    }
+
+    @Override
+    void loadReferences() {
+      nameAndType = getEntryWithIndex(nameAndTypeRef, NameAndTypeRefEntry.class);
+    }
+
+  }
+
+  private class EmptyEntry extends Entry {
 
     @Override
     public void writeTo(DataOutput sink) throws IOException {
       // this class writes nothing
     }
 
+  }
+
+  <T extends Entry> T getEntryWithIndex(int index, Class<T> expectedType) {
+    Entry entry = partEntries.get(index);
+    if (expectedType.isInstance(entry)) {
+      return expectedType.cast(entry);
+    }
+    throw new ConstantPoolException(index, expectedType.getSimpleName());
   }
 
 }
