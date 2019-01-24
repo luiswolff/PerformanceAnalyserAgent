@@ -34,25 +34,25 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
       LOGGER.fine("Redefine class definition of " + className);
 
       try {
-        ClassModifier classModifier = new ClassModifier(classfileBuffer);
-        int constantPoolIndex =
-            classModifier.addMethodReference(invocationClass.getName(), this.invocationMethod);
-        classModifier.addInvokeStaticToBegin(constantPoolIndex, redefineMethodName,
-            redefineMethodParameterTypes, redefineMethodSignature);
-        return classModifier.toByteCode();
+        return redefine(new ClassModifier(classfileBuffer));
       } catch (IOException e) {
         LOGGER.log(Level.SEVERE, "error transforming class " + className, e);
+      } catch (ConstantPoolException e) {
+        throw new IllegalClassFormatException(
+            String.format("Error in class %s: %s", className, e.getMessage()));
       }
     }
     return classfileBuffer;
   }
 
   private boolean canRedefine() {
-    return !Objects.isNull(invocationClass) //
-        && !Objects.isNull(invocationMethod) //
-        && !Objects.isNull(redefineMethodName) //
-        && !Objects.isNull(redefineMethodParameterTypes) //
+    // @formatter:off
+    return !Objects.isNull(invocationClass)
+        && !Objects.isNull(invocationMethod)
+        && !Objects.isNull(redefineMethodName) 
+        && !Objects.isNull(redefineMethodParameterTypes) 
         && !Objects.isNull(redefineMethodSignature);
+    // @formatter:on
   }
 
   private boolean containsRedefineMethod(Method[] methods) {
@@ -60,11 +60,14 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
   }
 
   private boolean matchMethodDefinition(Method method) {
-    return Optional.of(method) //
-        .filter(this::matchName) //
-        .filter(this::matchParameterTypes) //
-        .filter(this::matchModifiers) //
+    // @formatter:off
+    return Optional.of(method) 
+        .filter(this::matchName) 
+        .filter(this::matchParameterTypes) 
+        .filter(this::matchModifiers)
+        .filter(this::returnTypeIsVoid)
         .isPresent();
+    // @formatter:on
   }
 
   private boolean matchName(Method method) {
@@ -77,6 +80,17 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
 
   private boolean matchModifiers(Method method) {
     return Objects.equals(redefineMethodSignature, method.getModifiers());
+  }
+
+  private boolean returnTypeIsVoid(Method method) {
+    return Objects.equals(Void.TYPE, method.getReturnType());
+  }
+
+  private byte[] redefine(ClassModifier modifier) throws IOException {
+    int index = modifier.addMethodRef(invocationClass, invocationMethod);
+    modifier.pushInvokeStatic(index, redefineMethodName,
+        redefineMethodParameterTypes, redefineMethodSignature);
+    return modifier.toByteCode();
   }
 
   public void setInvocationClass(Class<?> invocationClass) {

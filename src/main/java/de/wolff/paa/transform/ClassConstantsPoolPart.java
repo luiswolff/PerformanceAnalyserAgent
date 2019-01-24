@@ -30,7 +30,7 @@ class ClassConstantsPoolPart
   ClassConstantsPoolPart(DataInput source) throws IOException {
     super(source);
     // @formatter:off
-    partEntries.stream()
+    entries.stream()
         .filter(RefEntry.class::isInstance)
         .map(RefEntry.class::cast)
         .forEach(RefEntry::loadReferences);
@@ -39,7 +39,7 @@ class ClassConstantsPoolPart
 
   @Override
   protected Entry readPartEntry(DataInput source) throws IOException {
-    if (partEntries.size() == 0) {
+    if (entries.size() == 0) {
       return new EmptyEntry();
     }
     byte tag = source.readByte();
@@ -104,7 +104,7 @@ class ClassConstantsPoolPart
       createMethodRef();
       addNewEntries();
 
-      return partEntries.indexOf(methodRef);
+      return entries.indexOf(methodRef);
     }
 
     private void createMethodRef() {
@@ -116,7 +116,7 @@ class ClassConstantsPoolPart
     private void addNewEntries() {
       Collection<Entry> newEntries = Arrays.asList(methodRef, classRef, classRef.utf8Value,
           nameAndType, nameAndType.name, nameAndType.type);
-      partEntries.addAll(newEntries);
+      entries.addAll(newEntries);
     }
 
   }
@@ -124,7 +124,7 @@ class ClassConstantsPoolPart
   abstract class Entry implements ClassPart {
 
     int getIndex() {
-      return partEntries.indexOf(this);
+      return entries.indexOf(this);
     }
 
   }
@@ -327,11 +327,21 @@ class ClassConstantsPoolPart
   }
 
   <T extends Entry> T getEntryWithIndex(int index, Class<T> expectedType) {
-    Entry entry = partEntries.get(index);
+    Entry entry = entries.get(index);
     if (expectedType.isInstance(entry)) {
       return expectedType.cast(entry);
     }
     throw new ConstantPoolException(index, expectedType.getSimpleName());
+  }
+
+  int findIndex(String content) {
+    for (int i = 1; i < entries.size(); i++) {
+      Entry entry = entries.get(i);
+      if (entry instanceof Utf8Entry && content.equals(((Utf8Entry) entry).content)) {
+        return i;
+      }
+    }
+    throw new ConstantPoolException(content);
   }
 
 }

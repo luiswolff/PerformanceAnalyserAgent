@@ -7,14 +7,14 @@ import java.util.ArrayList;
 
 abstract class AbstractClassListPart<T extends ClassPart> implements ClassPart {
 
-  protected final ArrayList<T> partEntries;
+  protected final ArrayList<T> entries;
 
   AbstractClassListPart(DataInput source) throws IOException {
     int count = source.readUnsignedShort();
-    partEntries = new ArrayList<T>(count);
+    entries = new ArrayList<T>(count);
     for (int i = 0; i < count; i++) {
       T partEntry = readPartEntry(source);
-      partEntries.add(partEntry);
+      entries.add(partEntry);
     }
   }
 
@@ -22,8 +22,8 @@ abstract class AbstractClassListPart<T extends ClassPart> implements ClassPart {
 
   @Override
   public void writeTo(DataOutput sink) throws IOException {
-    sink.writeShort(partEntries.size());
-    for (T partEntry : partEntries) {
+    sink.writeShort(entries.size());
+    for (T partEntry : entries) {
       partEntry.writeTo(sink);
     }
   }
