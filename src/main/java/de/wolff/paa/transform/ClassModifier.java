@@ -12,8 +12,6 @@ import java.util.stream.Collectors;
 
 class ClassModifier {
 
-  private static final byte INVOKE_STATIC = (byte) 0xB8;
-
   private final ClassStartPart classStart;
   private final ClassConstantsPoolPart classConstantsPool;
   private final ClassDescriptionPart classDescription;
@@ -47,10 +45,13 @@ class ClassModifier {
   }
 
   void pushInvokeStatic(int methodRef, String targetName,
-      Class<?>[] targetParams, int accessflags) {
+      Class<?>[] targetParams, int accessflags) throws IOException {
     AttributesPart method = classMethods.findMethod(accessflags, //
         classConstantsPool.findIndex(targetName),
         classConstantsPool.findIndex("(" + toClassRef(targetParams) + ")V"));
+
+    CodeModifier modifier = new CodeModifier(methodRef);
+    method.replaceAttribute(classConstantsPool.findIndex("Code"), modifier::modify);
 
   }
 
@@ -59,13 +60,7 @@ class ClassModifier {
   }
 
   private String toClassRef(Class<?> clazz) {
-    String prefix;
-    if (clazz.isArray()) {
-      prefix = "";
-    } else {
-      prefix = "L";
-    }
-    return prefix + clazz.getName().replace('.', '/');
+    return clazz.getName().replace('.', '/');
   }
 
   byte[] toByteCode() throws IOException {
@@ -93,6 +88,24 @@ class ClassModifier {
         classAttributs
     );
     // @formatter:on
+  }
+
+  private class CodeModifier {
+
+    private final int methodRef;
+
+    private CodeModifier(int methodRef) {
+      this.methodRef = methodRef;
+    }
+
+    private byte[] modify(byte[] methodCode) throws IOException {
+      CodePart codePart = new CodePart(new DataInputStream(new ByteArrayInputStream(methodCode)));
+      codePart.addMethodCallAtStart(methodRef);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream(methodCode.length);
+      codePart.writeTo(new DataOutputStream(baos));
+      return baos.toByteArray();
+    }
+
   }
 
 }

@@ -24,7 +24,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
-import de.wolff.paa.transform.MethodInvokedCallbackTransformer;
 
 public class TestMethodInvokedCallbackTransformer {
 
@@ -91,7 +90,7 @@ public class TestMethodInvokedCallbackTransformer {
 
     invokeStaticRedefined("NoMain", "apply", new Class<?>[] {});
 
-    verifyInvocations();;
+    verifyInvocations();
   }
 
   @Test
@@ -121,6 +120,7 @@ public class TestMethodInvokedCallbackTransformer {
   }
 
   private void compileClasses() {
+    // TODO: add test cases with Java 6 compiled classes, because they do not use StackMapTables
     CommandLineJavaCompiler javaCompiler = new CommandLineJavaCompiler("UTF-8", "1.8");
     classNames.stream().map(this::toJavaFile).map(javaCompiler::compile)
         .forEach(compiledClassFiles::add);
@@ -293,7 +293,7 @@ class TemporaryClassLoader extends ClassLoader {
   private final Map<String, byte[]> classDataMap = new HashMap<>();
 
   TemporaryClassLoader() {
-    super(ClassLoader.getSystemClassLoader());
+    super(TestMethodInvokedCallbackTransformer.class.getClassLoader());
   }
 
   @Override
