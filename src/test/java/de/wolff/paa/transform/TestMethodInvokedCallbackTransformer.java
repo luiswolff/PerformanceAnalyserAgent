@@ -15,11 +15,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -121,7 +118,7 @@ public class TestMethodInvokedCallbackTransformer {
 
   private void compileClasses() {
     // TODO: add test cases with Java 6 compiled classes, because they do not use StackMapTables
-    CommandLineJavaCompiler javaCompiler = new CommandLineJavaCompiler("UTF-8", "1.8");
+    CommandLineJavaCompiler javaCompiler = new CommandLineJavaCompiler("UTF-8", "1.6");
     classNames.stream().map(this::toJavaFile).map(javaCompiler::compile)
         .forEach(compiledClassFiles::add);
   }
@@ -282,55 +279,6 @@ class CommandLineJavaCompiler {
     String javaFileName = path.getFileName().toString();
     String classFileName = javaFileName.replace(".java", ".class");
     return path.resolveSibling(classFileName);
-  }
-
-}
-
-
-class TemporaryClassLoader extends ClassLoader {
-
-  private final List<Class<?>> additionalClasses = new LinkedList<>();
-  private final Map<String, byte[]> classDataMap = new HashMap<>();
-
-  TemporaryClassLoader() {
-    super(TestMethodInvokedCallbackTransformer.class.getClassLoader());
-  }
-
-  @Override
-  public Class<?> loadClass(String name) throws ClassNotFoundException {
-    Optional<Class<?>> clazz =
-        additionalClasses.stream().filter(c -> name.equals(c.getName())).findFirst();
-    if (clazz.isPresent()) {
-      return clazz.get();
-    }
-    return super.loadClass(name);
-  }
-
-  void addClassFile(Path classFile) {
-    String classFileName = classFile.getFileName().toString();
-    try {
-      addClass(classFileName.replace(".class", ""), Files.readAllBytes(classFile));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  void addClass(String className, byte[] classData) {
-    if (classDataMap.containsKey(className)) {
-      return;
-    }
-
-    System.out.printf("ClassLoader %s adds class %s", this, className);
-    System.out.println();
-
-    Class<?> clazz = defineClass(className, classData, 0, classData.length);
-    resolveClass(clazz);
-    additionalClasses.add(clazz);
-    classDataMap.put(className, classData);
-  }
-
-  byte[] classData(String key) {
-    return classDataMap.get(key);
   }
 
 }

@@ -16,6 +16,8 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
   private static final Logger LOGGER =
       Logger.getLogger(MethodInvokedCallbackTransformer.class.getName());
 
+  private final TemporaryClassLoader tempClassLoader = new TemporaryClassLoader();
+
   private Class<?> invocationClass;
   private String invocationMethod;
   private String redefineMethodName;
@@ -29,7 +31,18 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
 
     LOGGER.finer("Transformation method invoked for class " + className);
 
-    if (canRedefine() && containsRedefineMethod(classBeingRedefined.getMethods())) {
+    if (classBeingRedefined == null && className != null) {
+      // TODO: ignore classes from Prohibited packages
+      try {
+        classBeingRedefined = loadClassTemporary(className.replace('/', '.'), classfileBuffer);
+      } catch (Throwable t) {
+        return classfileBuffer;
+      }
+    }
+
+    // FIXME: classBeingRedefined is null
+    if (className != null && canRedefine()
+        && containsRedefineMethod(classBeingRedefined.getDeclaredMethods())) {
 
       LOGGER.fine("Redefine class definition of " + className);
 
@@ -43,6 +56,15 @@ public class MethodInvokedCallbackTransformer implements ClassFileTransformer {
       }
     }
     return classfileBuffer;
+  }
+
+  private Class<?> loadClassTemporary(String className, byte[] classfileBuffer) {
+    tempClassLoader.addClass(className, classfileBuffer);
+    try {
+      return tempClassLoader.loadClass(className);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private boolean canRedefine() {

@@ -26,6 +26,7 @@ class ClassConstantsPoolPart
   private static final byte CONSTANT_METHOD_TYPE = 16;
   private static final byte CONSTANT_INVOKE_DYNAMIC = 18;
 
+  private boolean nextUnusable;
 
   ClassConstantsPoolPart(DataInput source) throws IOException {
     super(source);
@@ -39,7 +40,8 @@ class ClassConstantsPoolPart
 
   @Override
   protected Entry readPartEntry(DataInput source) throws IOException {
-    if (entries.size() == 0) {
+    if (entries.size() == 0 || nextUnusable) {
+      nextUnusable = false;
       return new EmptyEntry();
     }
     byte tag = source.readByte();
@@ -59,6 +61,7 @@ class ClassConstantsPoolPart
         return new NumberEntry(tag, source.readInt());
       case CONSTANT_LONG:
       case CONSTANT_DOUBLE:
+        nextUnusable = true;
         return new HighNumberEntry(tag, source.readInt(), source.readInt());
       case CONSTANT_CLASS:
       case CONSTANT_STRING:
